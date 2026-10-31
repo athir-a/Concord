@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from apps.common.permissions import IsTeam
 
 from . import services
+from .filters import SubscriptionFilter
 from .models import SubscriptionEvent
 from .selectors import subscriptions_visible_to
 from .serializers import (
@@ -30,7 +31,7 @@ class SubscriptionViewSet(
 ):
     """Status never changes through PATCH, only through the named actions below."""
 
-    filterset_fields = ["status", "customer", "plan"]
+    filterset_class = SubscriptionFilter
     search_fields = ["number", "customer__name", "customer__company"]
     ordering_fields = ["number", "start_date", "expiry_date", "next_billing_date", "recurring_subtotal"]
     http_method_names = ["get", "post", "patch", "head", "options"]
