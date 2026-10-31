@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.db.models import F, Q
+from django.utils import timezone
 
 from apps.accounts.models import Customer
 from apps.common.models import TimeStampedModel
@@ -88,6 +89,15 @@ class Invoice(TimeStampedModel):
 
     def __str__(self):
         return self.number
+
+    @property
+    def amount_due(self):
+        return self.total - self.amount_paid
+
+    @property
+    def is_overdue(self):
+        """Worked out each time rather than stored, so it can never go stale."""
+        return self.status == self.Status.CONFIRMED and self.due_date < timezone.localdate()
 
 
 class InvoiceLine(models.Model):

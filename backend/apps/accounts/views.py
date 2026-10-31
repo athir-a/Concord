@@ -2,18 +2,19 @@ from django.contrib.auth import authenticate, login, logout
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from drf_spectacular.utils import extend_schema
-from rest_framework import generics, serializers, status
+from rest_framework import generics, mixins, serializers, status, viewsets
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from apps.common.exceptions import DomainError
-from apps.common.permissions import IsAdminRole
+from apps.common.permissions import IsAdminRole, IsTeam
 
 from . import services
-from .models import User
+from .models import Customer, User
 from .serializers import (
+    CustomerSerializer,
     LoginSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
@@ -123,6 +124,20 @@ class PasswordResetConfirmView(PublicFormView):
         user.set_password(data["password"])
         user.save(update_fields=["password"])
         return Response({"detail": "Your password has been changed. You can now log in."})
+
+
+class CustomerViewSet(
+    mixins.ListModelMixin, mixins.CreateModelMixin, mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin, viewsets.GenericViewSet,
+):
+    """No delete: customers have billing history. Set is_active to false instead."""
+
+    permission_classes = [IsTeam]
+    serializer_class = CustomerSerializer
+    queryset = Customer.objects.all()
+    filterset_fields = ["is_active"]
+    search_fields = ["name", "company", "email", "phone"]
+    ordering_fields = ["name", "company", "created_at"]
 
 
 class StaffListCreateView(generics.ListAPIView):

@@ -158,9 +158,38 @@ def update_draft(subscription, *, line_specs=None, actor=None, **fields):
     if subscription.expiry_date <= subscription.start_date:
         raise _invalid("Expiry must be after the start date.", "expiry_date")
     subscription.save()
+    if line_specs is None and "plan" in fields:
+        # The plan fee line belongs to the plan, so changing plan rewrites the lines.
+        line_specs = [
+            {"product": line.product, "variant": line.variant, "quantity": line.quantity, "unit_price": line.unit_price}
+            for line in subscription.lines.select_related("product", "variant")
+            if line.product
+        ]
     if line_specs is not None:
         _write_lines(subscription, line_specs)
     return subscription
+
+
+def available_actions(subscription):
+    """What can be done next, so screens only offer buttons that will work."""
+    plan = subscription.plan
+    status = subscription.status
+    actions = []
+    if status == Status.DRAFT:
+        actions.append("send")
+    if status == Status.QUOTATION:
+        actions += ["confirm", "revise"]
+    if status == Status.CONFIRMED:
+        actions.append("activate")
+    if status == Status.ACTIVE and plan.pausable:
+        actions.append("pause")
+    if status == Status.PAUSED:
+        actions.append("resume")
+    if status in {Status.ACTIVE, Status.PAUSED} and plan.renewable:
+        actions.append("renew")
+    if status != Status.CLOSED and (status not in {Status.ACTIVE, Status.PAUSED} or plan.closable):
+        actions.append("close")
+    return actions
 
 
 @transaction.atomic

@@ -2,7 +2,22 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
-from .models import User
+from .models import Customer, User
+
+
+class CustomerSerializer(serializers.ModelSerializer):
+    has_login = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Customer
+        fields = [
+            "id", "name", "company", "email", "phone", "address", "tax_id", "is_active",
+            "has_login", "created_at",
+        ]
+        read_only_fields = ["created_at"]
+
+    def get_has_login(self, customer) -> bool:
+        return customer.user_id is not None
 
 
 def _check_password(password, user=None):

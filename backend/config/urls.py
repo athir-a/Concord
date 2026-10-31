@@ -6,6 +6,10 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/", include("apps.accounts.urls")),
+    path("api/v1/", include("apps.catalog.urls")),
+    path("api/v1/", include("apps.subscriptions.urls")),
+    path("api/v1/", include("apps.billing.urls")),
+    path("api/v1/", include("apps.reports.urls")),
 ]
 
 if settings.API_DOCS_ENABLED:

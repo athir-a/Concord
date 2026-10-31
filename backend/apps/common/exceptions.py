@@ -1,5 +1,7 @@
+from django.db.models import ProtectedError
 from rest_framework import status
 from rest_framework.exceptions import APIException, ValidationError
+from rest_framework.response import Response
 from rest_framework.views import exception_handler
 
 
@@ -27,6 +29,12 @@ def _flatten_errors(errors):
 
 def api_exception_handler(exc, context):
     """Every API error has one shape: {"code", "detail", "fields"}."""
+    if isinstance(exc, ProtectedError):
+        return Response(
+            {"code": "in_use", "detail": "This is in use by other records, so it can't be deleted.", "fields": {}},
+            status=status.HTTP_409_CONFLICT,
+        )
+
     response = exception_handler(exc, context)
     if response is None:
         return None
@@ -41,10 +49,12 @@ def api_exception_handler(exc, context):
         )
         response.data = {"code": "validation_error", "detail": first, "fields": fields}
     else:
-        code = getattr(exc.detail, "code", None) or getattr(exc, "default_code", "error")
+        # Read from the response: Http404 and Django's PermissionDenied have no .detail
+        # of their own. DRF has already converted them when building the response.
+        detail = response.data.get("detail", "Something went wrong.")
         response.data = {
-            "code": code,
-            "detail": str(exc.detail),
+            "code": getattr(detail, "code", "error"),
+            "detail": str(detail),
             "fields": getattr(exc, "fields", {}),
         }
     return response
