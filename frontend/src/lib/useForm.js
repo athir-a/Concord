@@ -1,5 +1,8 @@
 import { useState } from "react";
 
+// These have their own editors outside the form's values, and show their own errors.
+const CUSTOM_EDITORS = new Set(["customer", "lines", "variants", "products"]);
+
 /** Form state plus server-side errors mapped onto fields. The backend is the validator. */
 export function useForm(initialValues, onSubmit) {
   const [values, setValues] = useState(initialValues);
@@ -36,7 +39,7 @@ export function useForm(initialValues, onSubmit) {
       const fields = error.fields || {};
       setFieldErrors(fields);
       // Errors on fields this form doesn't show still need to reach the user.
-      const shown = Object.keys(fields).filter((name) => name in values);
+      const shown = Object.keys(fields).filter((name) => name in values || CUSTOM_EDITORS.has(name));
       if (shown.length === 0) setFormError(error.message);
     } finally {
       setSubmitting(false);

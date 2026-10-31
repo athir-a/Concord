@@ -26,7 +26,7 @@ function AttentionRow({ to, count, label, detail }) {
   return (
     <li>
       <Link to={to} className="flex items-center gap-3 px-4 py-3 transition-colors duration-150 hover:bg-canvas/70">
-        <span className={`tabular w-10 text-right text-lg font-semibold ${count ? "" : "text-ink-faint"}`}>{count.toLocaleString("en-IN")}</span>
+        <span className={`tabular w-14 shrink-0 text-right text-lg font-semibold ${count ? "" : "text-ink-faint"}`}>{count.toLocaleString("en-IN")}</span>
         <span className="min-w-0 flex-1">
           <span className="block font-medium">{label}</span>
           {detail && <span className="block text-[13px] text-ink-muted">{detail}</span>}

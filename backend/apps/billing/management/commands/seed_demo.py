@@ -152,6 +152,12 @@ class Command(BaseCommand):
         return "active"
 
     def _line_specs(self, plan):
+        # Short billing cycles are small purchases. Twenty-five seats billed daily would
+        # dwarf every other customer and make the revenue figures look absurd.
+        if plan.interval == "daily":
+            return [(self.products[2], 1, Decimal("19.00"))]
+        if plan.interval == "weekly":
+            return [(self.products[1], self.rng.choice([1, 2]), Decimal("79.00"))]
         chosen = self.rng.sample(self.products, self.rng.randint(1, 2))
         specs = []
         for product in chosen:

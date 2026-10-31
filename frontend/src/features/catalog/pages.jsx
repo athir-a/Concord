@@ -324,17 +324,12 @@ const TABS = {
   },
 };
 
-export function CatalogPage() {
-  const { user } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const tabKey = TABS[searchParams.get("tab")] ? searchParams.get("tab") : "products";
-  const tab = TABS[tabKey];
+/** Keyed by tab in the parent, so one tab's rows are never drawn with another tab's columns. */
+function CatalogTab({ tab, isAdmin }) {
   const list = useLocalList(tab.path);
   const [editing, setEditing] = useState(null);
-  const isAdmin = user.role === "admin";
   const TabDialog = tab.dialog;
   const add = isAdmin && <Button onClick={() => setEditing({})}><Plus size={15} aria-hidden="true" /> New {tab.noun}</Button>;
-
   const columns = [
     {
       header: "Name",
@@ -344,10 +339,29 @@ export function CatalogPage() {
     },
     ...tab.columns,
   ];
+  return (
+    <>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-ink-muted">{tab.hint}</p>
+        {add}
+      </div>
+      <Card padded={false}>
+        <DataTable query={list} onPage={list.setPage} columns={columns} empty={<EmptyState title={`No ${tab.noun}s yet`} action={add} />} />
+      </Card>
+      {editing && <TabDialog key={editing.id ?? "new"} record={editing.id ? editing : null} onClose={() => setEditing(null)} />}
+    </>
+  );
+}
+
+export function CatalogPage() {
+  const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabKey = TABS[searchParams.get("tab")] ? searchParams.get("tab") : "products";
+  const isAdmin = user.role === "admin";
 
   return (
     <>
-      <PageHeader title="Catalog" subtitle={isAdmin ? "Everything that defines what's for sale." : "Read-only. Only the admin can change the catalog."} actions={add} />
+      <PageHeader title="Catalog" subtitle={isAdmin ? "Everything that defines what's for sale." : "Read-only. Only the admin can change the catalog."} />
       <div role="tablist" aria-label="Catalog sections" className="mb-4 flex gap-1 overflow-x-auto border-b border-line">
         {Object.entries(TABS).map(([key, value]) => (
           <button
@@ -355,18 +369,14 @@ export function CatalogPage() {
             type="button"
             role="tab"
             aria-selected={key === tabKey}
-            onClick={() => { setSearchParams({ tab: key }); list.setPage(1); }}
+            onClick={() => setSearchParams({ tab: key })}
             className={`-mb-px border-b-2 px-3 py-2 whitespace-nowrap transition-colors duration-150 ${key === tabKey ? "border-accent font-medium text-accent" : "border-transparent text-ink-muted hover:text-ink"}`}
           >
             {value.label}
           </button>
         ))}
       </div>
-      <p className="mb-3 text-ink-muted">{tab.hint}</p>
-      <Card padded={false}>
-        <DataTable query={list} onPage={list.setPage} columns={columns} empty={<EmptyState title={`No ${tab.noun}s yet`} action={add} />} />
-      </Card>
-      {editing && <TabDialog key={editing.id ?? "new"} record={editing.id ? editing : null} onClose={() => setEditing(null)} />}
+      <CatalogTab key={tabKey} tab={TABS[tabKey]} isAdmin={isAdmin} />
     </>
   );
 }
