@@ -1,4 +1,4 @@
 from django.apps import AppConfig
-class DiscountsConfig(AppConfig):
+class ReportsConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "apps.discounts"
+    name = "apps.reports"

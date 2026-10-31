@@ -1,152 +1,87 @@
-# Brightloop — Subscription Management System
+# Concord
 
-A modular monolith starter for products, plans, quotations, subscriptions, recurring invoices,
-discounts, payments and revenue reporting.
+**One platform. Every operation in sync.**
+
+Concord runs a subscription business from end to end: products and plans, quotations, subscriptions, recurring invoices, discounts, payments and revenue reporting. It is built for the Brightloop Software problem statement in the Odoo x Make-A-Ton 9.0 hackathon.
+
+> **Status:** in active development. Accounts and login work; the rest is being built. This README only describes what exists.
 
 ## Stack
-- Frontend: React + Vite
-- Backend: Django + Django REST Framework
-- Database: PostgreSQL
-- Background jobs: Celery + Redis (planned)
-- Local infrastructure: Docker Compose
 
-## Structure
-
-```text
-brightloop/
-├── frontend/                 # React application
-│   └── src/
-│       ├── app/               # App shell and routing
-│       ├── components/        # Reusable UI
-│       ├── features/          # Feature-oriented screens and logic
-│       ├── hooks/
-│       ├── layouts/
-│       ├── lib/               # API client and utilities
-│       ├── pages/
-│       └── styles/
-├── backend/
-│   ├── config/                # Django settings and URL configuration
-│   ├── apps/
-│   │   ├── accounts/
-│   │   ├── customers/
-│   │   ├── catalog/
-│   │   ├── plans/
-│   │   ├── quotations/
-│   │   ├── subscriptions/
-│   │   ├── billing/
-│   │   ├── discounts/
-│   │   ├── payments/
-│   │   ├── notifications/
-│   │   └── analytics/
-│   ├── common/                # Shared utilities and permissions
-│   └── tests/
-├── docs/
-├── infra/
-├── .env.example
-├── .gitignore
-└── docker-compose.yml
-```
-
-## How the system connects
-
-```text
-Accounts & Roles
-      |
-Products -> Variants -> Plans
-                       |
-                   Quotations
-                       |
-                  Subscriptions
-                       |
-                Scheduled Billing
-                       |
-                    Invoices
-                       |
-                    Payments
-                       |
-                 Finance Reports
-```
-
-## Backend module responsibilities
-
-| App | Responsibility |
+| Layer | Technology |
 |---|---|
-| accounts | Login, password reset, roles and staff access |
-| customers | Customer/company profiles |
-| catalog | Products, variants, selling price and cost |
-| plans | Billing frequency, quantity and availability rules |
-| quotations | Templates, quotations and conversion |
-| subscriptions | Lifecycle, renewals, pauses and closures |
-| billing | Invoice generation, invoice lines and taxes |
-| discounts | Fixed/percentage rules, eligibility and usage limits |
-| payments | Payment records, allocations and balances |
-| notifications | Email and in-app notifications |
-| analytics | MRR, ARR, collected revenue and receivables |
+| Frontend | React, Vite, Tailwind CSS, TanStack Query |
+| Backend | Python 3.12, Django 5.2, Django REST Framework |
+| Database | PostgreSQL 16, running locally |
 
-## Local setup
+Everything runs locally with no cloud services.
 
-1. Clone the repository and enter the project folder.
-2. Copy `.env.example` to `.env` and change the development credentials.
-3. Start local infrastructure:
+## Run it
+
+You need **Python 3.12** (newer versions may not have the packages we use), **Node 22** and **PostgreSQL 16**.
+
+**1. Configure.** From the project root:
 
 ```bash
-docker compose up -d
+cp .env.example .env
 ```
 
-4. Start the backend:
+Set `DJANGO_SECRET_KEY` in `.env` to any long random string. Never commit `.env`.
+
+**2. Start the database.** Pick one:
+
+- **Docker:** `docker compose up -d`
+- **Your own Postgres:** create a `concord` user and database matching `DATABASE_URL` in `.env`
+- **No Postgres (frontend work only):** delete the `DATABASE_URL` line and Django uses SQLite. Don't test billing on SQLite, because it ignores row locks.
+
+**3. Start the backend.**
 
 ```bash
 cd backend
-python -m venv .venv
-# Windows: .venv\Scripts\activate
-# macOS/Linux: source .venv/bin/activate
-pip install -r requirements.txt
+py -3.12 -m venv .venv            # macOS/Linux: python3.12 -m venv .venv
+.venv\Scripts\activate            # macOS/Linux: source .venv/bin/activate
+pip install -r requirements-dev.txt
 python manage.py migrate
+python manage.py createsuperuser
 python manage.py runserver
 ```
 
-5. Start the frontend in another terminal:
+**4. Start the frontend** in a second terminal.
 
 ```bash
 cd frontend
-cp .env.example .env
 npm install
 npm run dev
 ```
 
-## Suggested implementation order
+Open <http://localhost:5173>. API docs are at <http://localhost:5173/api/docs> while `DJANGO_DEBUG=True`.
 
-1. Project setup and health checks.
-2. Accounts, authentication and role-based permissions.
-3. Customers, products, variants and plans.
-4. Quotation templates and quotations.
-5. Subscription lifecycle and state transitions.
-6. Tax and discount calculation services.
-7. Invoice generation and duplicate-billing protection.
-8. Payment recording and invoice reconciliation.
-9. Customer portal and notifications.
-10. Analytics, pagination, indexes and performance tests.
+Emails print in the backend terminal unless SMTP is configured in `.env`, so that's where password reset links appear by default.
 
-## Important engineering rules
-
-- Use decimal database fields for money, never floating point.
-- Use timezone-aware datetimes and define the business timezone.
-- Enforce customer ownership in backend permissions, not only in the UI.
-- Use database transactions for quotation conversion, invoice creation and payment allocation.
-- Prevent duplicate invoices with a unique subscription + billing-period constraint.
-- Snapshot invoice line descriptions, prices, taxes and discounts at invoice time.
-- Validate status transitions on the backend.
-- Paginate list endpoints and index frequently filtered fields.
-- Never commit `.env` or real credentials.
-
-## Git workflow
+## Tests
 
 ```bash
-git checkout -b feature/subscription-lifecycle
-git add .
-git commit -m "Add subscription lifecycle foundation"
-git push -u origin feature/subscription-lifecycle
+cd backend
+pytest
 ```
 
-This is an architectural scaffold, not a complete production billing system. Payment gateway integration,
-production email delivery, and full authentication flows still need to be implemented.
+## Working in this repo
+
+We work on `main` only. Commit small changes often, from your own GitHub account:
+
+```bash
+git pull --rebase
+git add <your files>
+git commit -m "Describe the change"
+git push
+```
+
+## Architecture
+
+A modular monolith: one Django project, one database, and apps that depend in one direction only.
+
+```text
+common <- accounts <- catalog <- subscriptions <- billing <- reports
+```
+
+Business rules live in each app's `services.py`. Views handle HTTP and serializers check input shape. Statuses can only change through named actions, never by editing a field.
