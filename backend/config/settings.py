@@ -123,3 +123,7 @@ EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS")
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 EMAIL_TIMEOUT = 10
+
+# Lets a billing run use a future date, so a demo can show next month's billing day.
+# Off in production, where billing must never run ahead of the calendar.
+BILLING_ALLOW_FUTURE_AS_OF = DEBUG or env_bool("BILLING_ALLOW_FUTURE_AS_OF")

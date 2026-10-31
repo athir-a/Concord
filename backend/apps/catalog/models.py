@@ -79,6 +79,8 @@ class Plan(TimeStampedModel):
     available_to = models.DateField(null=True, blank=True)
     # How many billing periods a new term lasts. Sets the default expiry and each renewal.
     term_periods = models.PositiveIntegerField(default=12)
+    # Applies to the plan fee line, which has no product to take a tax rule from.
+    tax_rule = models.ForeignKey(TaxRule, null=True, blank=True, on_delete=models.PROTECT, related_name="plans")
     # The admin decides these plan by plan.
     auto_close = models.BooleanField(default=False)
     closable = models.BooleanField(default=True)
