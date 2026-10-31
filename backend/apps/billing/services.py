@@ -20,6 +20,12 @@ from .models import BillingRun, Invoice, InvoiceLine, Payment
 from .pricing import DiscountInput, LineInput, price_invoice
 
 DOUBLE_BILLING_CONSTRAINT = "invoice_one_live_per_period"
+SQLITE_DOUBLE_BILLING = "billing_invoice.subscription_id, billing_invoice.period_start"
+
+
+def _is_double_billing(error):
+    """Postgres names the constraint in its error, and SQLite names the columns."""
+    return DOUBLE_BILLING_CONSTRAINT in str(error) or SQLITE_DOUBLE_BILLING in str(error)
 
 
 # --- Pricing a subscription ---
@@ -232,7 +238,7 @@ def run_billing(*, as_of=None, triggered_by=None):
             else:
                 run.skipped_count += 1
         except IntegrityError as error:
-            if DOUBLE_BILLING_CONSTRAINT not in str(error):
+            if not _is_double_billing(error):
                 run.failed_count += 1
                 run.errors.append({"subscription": subscription_id, "error": str(error)})
             else:
@@ -305,7 +311,7 @@ def reissue_invoice(invoice, *, today=None):
                 subscription, invoice.period_start, invoice.period_end, issue_date=today or timezone.localdate()
             )
     except IntegrityError as error:
-        if DOUBLE_BILLING_CONSTRAINT not in str(error):
+        if not _is_double_billing(error):
             raise
         raise DomainError("This period already has a live invoice.", code="already_invoiced")
 
