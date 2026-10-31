@@ -1,3 +1,4 @@
+import { Check, Circle } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { homeFor, useAuth } from "../../app/auth";
@@ -7,8 +8,32 @@ import { Notice } from "../../components/Notice";
 import { api } from "../../lib/api";
 import { useForm } from "../../lib/useForm";
 
-const PASSWORD_HINT = "At least 9 characters, with an uppercase letter, a lowercase letter and a special character.";
 const LINK = "font-medium text-accent hover:underline";
+
+const PASSWORD_RULES = [
+  ["More than eight characters", (p) => p.length > 8],
+  ["An uppercase letter", (p) => /[A-Z]/.test(p)],
+  ["A lowercase letter", (p) => /[a-z]/.test(p)],
+  ["A special character", (p) => /[^A-Za-z0-9\s]/.test(p)],
+];
+
+/** Live help while typing. The server still checks, and has the final word. */
+export function PasswordChecklist({ password }) {
+  return (
+    <ul className="mt-2 space-y-1 text-[13px]">
+      {PASSWORD_RULES.map(([label, passes]) => {
+        const met = passes(password);
+        return (
+          <li key={label} className={`flex items-center gap-1.5 ${met ? "text-success" : "text-ink-muted"}`}>
+            {met ? <Check size={13} aria-hidden="true" /> : <Circle size={13} aria-hidden="true" />}
+            {label}
+            <span className="sr-only">{met ? "(met)" : "(not met yet)"}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 function Heading({ title, subtitle }) {
   return (
@@ -58,7 +83,10 @@ export function SignupPage() {
       <Field label="Your name" autoComplete="name" autoFocus {...form.field("name")} />
       <Field label="Company (optional)" autoComplete="organization" {...form.field("company")} />
       <Field label="Email" type="email" autoComplete="email" {...form.field("email")} />
-      <Field label="Password" type="password" autoComplete="new-password" hint={PASSWORD_HINT} {...form.field("password")} />
+      <div>
+        <Field label="Password" type="password" autoComplete="new-password" required {...form.field("password")} />
+        <PasswordChecklist password={form.values.password} />
+      </div>
       <Button type="submit" loading={form.submitting} className="w-full">Create account</Button>
       <p className="text-[13px] text-ink-muted">
         Already have an account? <Link to="/login" className={LINK}>Log in</Link>
@@ -111,7 +139,10 @@ export function ResetPasswordPage() {
     <form onSubmit={form.handleSubmit} className="space-y-4" noValidate>
       <Heading title="Choose a new password" />
       {form.formError && <Notice>{form.formError}</Notice>}
-      <Field label="New password" type="password" autoComplete="new-password" autoFocus hint={PASSWORD_HINT} {...form.field("password")} />
+      <div>
+        <Field label="New password" type="password" autoComplete="new-password" autoFocus required {...form.field("password")} />
+        <PasswordChecklist password={form.values.password} />
+      </div>
       <Button type="submit" loading={form.submitting} className="w-full">Change password</Button>
     </form>
   );

@@ -7,14 +7,22 @@ export function useForm(initialValues, onSubmit) {
   const [formError, setFormError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const set = (name, value) => {
+    setValues((current) => ({ ...current, [name]: value }));
+    setFieldErrors((current) => ({ ...current, [name]: undefined }));
+  };
+
   const field = (name) => ({
     name,
-    value: values[name],
+    value: values[name] ?? "",
     error: fieldErrors[name],
-    onChange: (event) => {
-      setValues((current) => ({ ...current, [name]: event.target.value }));
-      setFieldErrors((current) => ({ ...current, [name]: undefined }));
-    },
+    onChange: (event) => set(name, event.target.value),
+  });
+
+  const check = (name) => ({
+    name,
+    checked: Boolean(values[name]),
+    onChange: (event) => set(name, event.target.checked),
   });
 
   const handleSubmit = async (event) => {
@@ -27,11 +35,13 @@ export function useForm(initialValues, onSubmit) {
     } catch (error) {
       const fields = error.fields || {};
       setFieldErrors(fields);
-      if (Object.keys(fields).length === 0) setFormError(error.message);
+      // Errors on fields this form doesn't show still need to reach the user.
+      const shown = Object.keys(fields).filter((name) => name in values);
+      if (shown.length === 0) setFormError(error.message);
     } finally {
       setSubmitting(false);
     }
   };
 
-  return { field, values, handleSubmit, submitting, formError };
+  return { field, check, set, values, handleSubmit, submitting, formError, fieldErrors };
 }
